@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -28,6 +27,9 @@ func main() {
 		fmt.Println("error creating Discord session,", err)
 		return
 	}
+
+	// Specify the necessary intents.
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent
 
 	dg.AddHandler(messageCreate)
 
