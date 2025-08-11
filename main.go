@@ -8,6 +8,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+
+	"discord-bot/handlers"
 )
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 	// Specify the necessary intents.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent
 
-	dg.AddHandler(messageCreate)
+	dg.AddHandler(handlers.MessageCreate)
 
 	err = dg.Open()
 	if err != nil {
@@ -47,12 +49,4 @@ func main() {
 	dg.Close()
 }
 
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
 
-	if m.Content == "!ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
-	}
-}
