@@ -20,6 +20,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/discord-bot
+            git reset --hard origin/main
             git pull
             go mod tidy
             go build -v -o discord-bot .
