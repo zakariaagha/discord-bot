@@ -66,15 +66,14 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Println("Error loading .env file")
-		return
-	}
+	// Load .env file if it exists, but don't fail if it doesn't.
+	// This allows for local development with a .env file, and server deployment with systemd environment variables.
+	godotenv.Load()
+
 	token := os.Getenv("DISCORD_TOKEN")
 	if token == "" {
-		fmt.Println("Error: DISCORD_TOKEN environment variable not set.")
-		return
+		// This is now a critical error, because the token should have been loaded either from .env or systemd.
+		log.Fatal("Error: DISCORD_TOKEN environment variable not set.")
 	}
 
 	// Get the database path from the environment variable, with a default
