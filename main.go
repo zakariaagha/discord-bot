@@ -7,10 +7,23 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync" // New import for mutex
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+)
+
+// PendingConfirmation struct to hold information about a pending duplicate confirmation
+type PendingConfirmation struct {
+	RestaurantName string
+	MatchedName    string
+}
+
+var (
+	// Map to store pending confirmations, keyed by ChannelID or UserID
+	pendingConfirmations     = make(map[string]PendingConfirmation)
+	pendingConfirmationsMutex sync.Mutex // Mutex to protect pendingConfirmations
 )
 
 // Handler is now an empty struct as it doesn't need to hold a database connection.
@@ -51,10 +64,14 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 			return
 		}
 
-		count, err := AddRestaurant(restaurantName)
+	count, err := AddRestaurant(restaurantName)
 		if err != nil {
-			log.Printf("Failed to add restaurant: %v", err)
-			s.ChannelMessageSend(m.ChannelID, "Failed to add restaurant.")
+			if strings.Contains(err.Error(), "is a duplicate of") {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to add restaurant: %v", err))
+			} else {
+				log.Printf("Failed to add restaurant: %v", err)
+				s.ChannelMessageSend(m.ChannelID, "Failed to add restaurant due to an unexpected error.")
+			}
 			return
 		}
 
