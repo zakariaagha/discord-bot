@@ -22,5 +22,5 @@ jobs:
             cd /home/ubuntu/discord-bot
             git pull
             go mod tidy
-            go build -o discord-bot main.go
+            go build -v -o discord-bot .
             sudo systemctl restart discord-bot
