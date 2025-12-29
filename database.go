@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3" // The database driver
+	_ "modernc.org/sqlite" // The pure Go SQLite driver
 )
 
 // InitDB initializes and returns a connection to the database.
 func InitDB(filepath string) *sql.DB {
-	db, err := sql.Open("sqlite3", filepath)
+	db, err := sql.Open("sqlite", filepath)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
