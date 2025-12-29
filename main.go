@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -14,10 +13,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Handler is a struct that holds the database connection.
-type Handler struct {
-	DB *sql.DB
-}
+// Handler is now an empty struct as it doesn't need to hold a database connection.
+type Handler struct{}
 
 // MessageCreate is a method of the Handler struct that handles incoming messages.
 func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -31,7 +28,7 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 	}
 
 	if m.Content == "!list" {
-		restaurants, err := GetAllRestaurants(h.DB)
+		restaurants, err := GetAllRestaurants()
 		if err != nil {
 			log.Printf("Failed to get restaurants: %v", err)
 			s.ChannelMessageSend(m.ChannelID, "Failed to get restaurants.")
@@ -54,25 +51,23 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 			return
 		}
 
-		id, err := AddRestaurant(h.DB, restaurantName)
+		count, err := AddRestaurant(restaurantName)
 		if err != nil {
 			log.Printf("Failed to add restaurant: %v", err)
 			s.ChannelMessageSend(m.ChannelID, "Failed to add restaurant.")
 			return
 		}
 
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Added restaurant \"%s\" with ID %d.", restaurantName, id))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Added restaurant \"%s\". Total count: %d.", restaurantName, count))
 	}
 }
 
 func main() {
 	// Load .env file if it exists, but don't fail if it doesn't.
-	// This allows for local development with a .env file, and server deployment with systemd environment variables.
 	godotenv.Load()
 
 	token := os.Getenv("DISCORD_TOKEN")
 	if token == "" {
-		// This is now a critical error, because the token should have been loaded either from .env or systemd.
 		log.Fatal("Error: DISCORD_TOKEN environment variable not set.")
 	}
 
@@ -83,16 +78,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to get user home directory: %v", err)
 		}
-		dbPath = filepath.Join(homeDir, "discord-bot.db")
+		dbPath = filepath.Join(homeDir, "restaurants.json")
 	}
 
-	// Initialize the database
-	db := InitDB(dbPath)
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Printf("Failed to close database: %v", err)
-		}
-	}()
+	// Initialize the database file
+	initDB(dbPath)
 
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
@@ -103,8 +93,8 @@ func main() {
 	// Specify the necessary intents.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent
 
-	// Create a new handler with the database connection
-	h := &Handler{DB: db}
+	// Create a new handler
+	h := &Handler{}
 
 	dg.AddHandler(h.MessageCreate)
 
