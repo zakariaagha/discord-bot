@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -79,7 +80,11 @@ func main() {
 	// Get the database path from the environment variable, with a default
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = "./discord-bot.db"
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatalf("Failed to get user home directory: %v", err)
+		}
+		dbPath = filepath.Join(homeDir, "discord-bot.db")
 	}
 
 	// Initialize the database
