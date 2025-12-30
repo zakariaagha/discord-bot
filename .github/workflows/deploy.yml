@@ -28,17 +28,17 @@ jobs:
             
             # --- New ML API Docker Deployment ---
             cd /home/ubuntu/discord-bot/ml-api
-            docker build -t ml-api .
+            sudo docker build -t ml-api .
             
             # Stop and remove the old container if it exists
-            docker stop ml-api || true
-            docker rm ml-api || true
+            sudo docker stop ml-api || true
+            sudo docker rm ml-api || true
             
             # Run the new container
             # -d: run in detached mode (in the background)
             # -p 8000:8000: map port 8000 on the server to port 8000 in the container
             # --restart always: ensure the container restarts if the server reboots
-            docker run -d --name ml-api -p 8000:8000 --restart always ml-api
+            sudo docker run -d --name ml-api -p 8000:8000 --restart always ml-api
             
             # --- Restart the Go Bot ---
             sudo systemctl restart discord-bot
