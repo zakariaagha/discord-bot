@@ -7,30 +7,17 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync" // New import for mutex
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
 
-// PendingConfirmation struct to hold information about a pending duplicate confirmation
-type PendingConfirmation struct {
-	RestaurantName string
-	MatchedName    string
-}
-
-var (
-	// Map to store pending confirmations, keyed by ChannelID or UserID
-	pendingConfirmations     = make(map[string]PendingConfirmation)
-	pendingConfirmationsMutex sync.Mutex // Mutex to protect pendingConfirmations
-)
-
 // Handler is now an empty struct as it doesn't need to hold a database connection.
 type Handler struct{}
 
-// MessageCreate is a method of the Handler struct that handles incoming messages.
-func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+// HandleMessage is a method of the Handler struct that handles incoming messages.
+func (h *Handler) HandleMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
@@ -57,8 +44,8 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 		return
 	}
 
-	if strings.HasPrefix(m.Content, "add \"") && strings.HasSuffix(m.Content, "\"") {
-		restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "add \""), "\"")
+	if strings.HasPrefix(m.Content, "!add \"") && strings.HasSuffix(m.Content, "\"") {
+		restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "!add \""), "\"")
 		if restaurantName == "" {
 			s.ChannelMessageSend(m.ChannelID, "Please provide a restaurant name.")
 			return
@@ -66,12 +53,8 @@ func (h *Handler) MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate
 
 	count, err := AddRestaurant(restaurantName)
 		if err != nil {
-			if strings.Contains(err.Error(), "is a duplicate of") {
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to add restaurant: %v", err))
-			} else {
-				log.Printf("Failed to add restaurant: %v", err)
-				s.ChannelMessageSend(m.ChannelID, "Failed to add restaurant due to an unexpected error.")
-			}
+			log.Printf("Failed to add restaurant: %v", err)
+			s.ChannelMessageSend(m.ChannelID, "Failed to add restaurant.")
 			return
 		}
 
@@ -113,7 +96,7 @@ func main() {
 	// Create a new handler
 	h := &Handler{}
 
-	dg.AddHandler(h.MessageCreate)
+	dg.AddHandler(h.HandleMessage)
 
 	err = dg.Open()
 	if err != nil {
