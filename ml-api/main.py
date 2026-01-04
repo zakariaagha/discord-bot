@@ -60,7 +60,7 @@ def process_message(request: ProcessMessageRequest):
             raise HTTPException(status_code=400, detail="Invalid data for check_duplicate task.")
 
         # Define the similarity threshold
-        SIMILARITY_THRESHOLD = 0.9
+        SIMILARITY_THRESHOLD = 0.8
 
         if not existing_names:
             return ProcessMessageResponse(task=request.task, result={"is_duplicate": False})

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt" // New import for fmt.Errorf
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 )
@@ -12,6 +15,13 @@ var (
 	dbFilePath = "restaurants.json"
 	fileMutex  = &sync.Mutex{}
 )
+
+// DuplicateCheckResponse defines the structure for the duplicate check result from the ML API.
+type DuplicateCheckResponse struct {
+	IsDuplicate    bool    `json:"is_duplicate"`
+	MatchedName    string  `json:"matched_name"`
+	SimilarityScore float64 `json:"similarity_score"`
+}
 
 // initDB ensures the JSON database file exists.
 func initDB(filepath string) {
@@ -47,10 +57,72 @@ func GetAllRestaurants() ([]string, error) {
 	return restaurants, nil
 }
 
-// AddRestaurant adds a new restaurant to the JSON file.
-// It returns the total number of restaurants after adding.
-func AddRestaurant(name string) (int, error) {
-	// We get the lock for the entire read-modify-write operation.
+// CheckForDuplicate calls the ML API to check for duplicate restaurant names.
+func CheckForDuplicate(name string) (*DuplicateCheckResponse, error) {
+	restaurants, err := GetAllRestaurants()
+	if err != nil {
+		return nil, err
+	}
+
+	mlApiURL := os.Getenv("ML_API_URL")
+	if mlApiURL == "" {
+		mlApiURL = "http://localhost:8000/process-message"
+	}
+
+	reqBody := map[string]interface{}{
+		"task": "check_duplicate",
+		"data": map[string]interface{}{
+			"new_name":       name,
+			"existing_names": restaurants,
+		},
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(mlApiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiResp struct {
+		Result DuplicateCheckResponse `json:"result"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		return nil, err
+	}
+
+	return &apiResp.Result, nil
+}
+
+
+// AddRestaurant first checks for duplicates, then adds a new restaurant if none are found.
+// It returns an error if a duplicate is found.
+func AddRestaurant(name string) (int, *DuplicateCheckResponse, error) {
+	duplicateInfo, err := CheckForDuplicate(name)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to check for duplicates: %w", err)
+	}
+
+	if duplicateInfo.IsDuplicate {
+		return 0, duplicateInfo, nil // Return duplicate info, no error
+	}
+
+	// If no duplicate, add the restaurant
+	count, err := ForceAddRestaurant(name)
+	return count, nil, err
+}
+
+// ForceAddRestaurant adds a new restaurant to the JSON file without checking for duplicates.
+func ForceAddRestaurant(name string) (int, error) {
 	fileMutex.Lock()
 	defer fileMutex.Unlock()
 
@@ -77,6 +149,7 @@ func AddRestaurant(name string) (int, error) {
 
 	return len(restaurants), nil
 }
+
 
 // RemoveRestaurant removes a restaurant from the JSON file.
 // It returns the total number of restaurants after removal, and an error if not found.
