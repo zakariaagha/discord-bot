@@ -45,38 +45,38 @@ import (
 			return
 		}
 	
-				if m.Content == "!ml" {
-					err := HealthCheckMLAPI()
-					if err != nil {
-						log.Printf("ML API health check failed: %v", err)
-						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("ML API health check failed: %v", err))
-					} else {
-						s.ChannelMessageSend(m.ChannelID, "Milinda, present!")
-					}
-					return
-				}
-		
-				// New command handler for !remove
-				if strings.HasPrefix(m.Content, "!remove \"") && strings.HasSuffix(m.Content, "\"") {
-					restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "!remove \""), "\"")
-					if restaurantName == "" {
-						s.ChannelMessageSend(m.ChannelID, "Please provide a restaurant name to remove.")
-						return
-					}
-		
-					count, err := RemoveRestaurant(restaurantName)
-					if err != nil {
-						log.Printf("Failed to remove restaurant: %v", err)
-						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to remove restaurant: %v", err))
-						return
-					}
-		
-					s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Removed restaurant \"%s\". Total count: %d.", restaurantName, count))
-					return // Add return to stop processing after this command
-				}
-		
-				if strings.HasPrefix(m.Content, "!add \"") && strings.HasSuffix(m.Content, "\"") {
-					restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "!add \""), "\"")			if restaurantName == "" {
+		if m.Content == "!ml" {
+			err := HealthCheckMLAPI()
+			if err != nil {
+				log.Printf("ML API health check failed: %v", err)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("ML API health check failed: %v", err))
+			} else {
+				s.ChannelMessageSend(m.ChannelID, "Milinda, present!")
+			}
+			return
+		}
+	
+		if strings.HasPrefix(m.Content, "!remove \"") && strings.HasSuffix(m.Content, "\"") {
+			restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "!remove \""), "\"")
+			if restaurantName == "" {
+				s.ChannelMessageSend(m.ChannelID, "Please provide a restaurant name to remove.")
+				return
+			}
+	
+			count, err := RemoveRestaurant(restaurantName)
+			if err != nil {
+				log.Printf("Failed to remove restaurant: %v", err)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to remove restaurant: %v", err))
+				return
+			}
+	
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Removed restaurant \"%s\". Total count: %d.", restaurantName, count))
+			return
+		}
+	
+		if strings.HasPrefix(m.Content, "!add \"") && strings.HasSuffix(m.Content, "\"") {
+			restaurantName := strings.TrimSuffix(strings.TrimPrefix(m.Content, "!add \""), "\"")
+			if restaurantName == "" {
 				s.ChannelMessageSend(m.ChannelID, "Please provide a restaurant name.")
 				return
 			}
@@ -90,8 +90,7 @@ import (
 	
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Added restaurant \"%s\". Total count: %d.", restaurantName, count))
 		}
-	}	
-	// HealthCheckMLAPI checks the status of the ML API.
+	}	// HealthCheckMLAPI checks the status of the ML API.
 	func HealthCheckMLAPI() error {
 		mlApiURL := os.Getenv("ML_API_URL")
 		if mlApiURL == "" {
