@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt" // New import for fmt.Errorf
 	"log"
 	"os"
 	"sync"
@@ -75,4 +76,46 @@ func AddRestaurant(name string) (int, error) {
 	}
 
 	return len(restaurants), nil
+}
+
+// RemoveRestaurant removes a restaurant from the JSON file.
+// It returns the total number of restaurants after removal, and an error if not found.
+func RemoveRestaurant(name string) (int, error) {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
+	data, err := os.ReadFile(dbFilePath)
+	if err != nil {
+		return 0, err
+	}
+
+	var restaurants []string
+	if err := json.Unmarshal(data, &restaurants); err != nil {
+		return 0, err
+	}
+
+	found := false
+	newRestaurants := []string{}
+	for _, r := range restaurants {
+		if r == name {
+			found = true
+		} else {
+			newRestaurants = append(newRestaurants, r)
+		}
+	}
+
+	if !found {
+		return len(restaurants), fmt.Errorf("restaurant '%s' not found", name)
+	}
+
+	newData, err := json.MarshalIndent(newRestaurants, "", "  ")
+	if err != nil {
+		return 0, err
+	}
+
+	if err := os.WriteFile(dbFilePath, newData, 0644); err != nil {
+		return 0, err
+	}
+
+	return len(newRestaurants), nil
 }
